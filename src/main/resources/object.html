@@ -1,0 +1,20 @@
+<h2 th:text="'Type ' + ${schema.title}"></h2>
+
+<table class="tg">
+  <thead>
+    <tr>
+      <th class="tg-0lax">Field Name</th>
+      <th class="tg-0lax">Field type</th>
+      <th class="tg-0lax">Enum Values</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr th:each="ent: ${schema.properties}">
+      <td class="tg-0lax" th:text="${ent.key}"></td>
+      <td class="tg-0lax" th:text="${ent.value.title}"></td>
+      <td class="tg-0lax">
+        <span th:if="${ent.value.extensions}" th:text="${ent.value.extensions.enums}"></span>
+      </td>
+    </tr>
+  </tbody>
+</table>

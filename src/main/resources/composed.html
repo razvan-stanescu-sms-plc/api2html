@@ -1,0 +1,7 @@
+<h2 th:text="'Type ' + ${schema.title}"></h2>
+
+One of
+
+<ul>
+  <li th:each="child: ${schema.oneOf}"><span th:text="${child.title}"></span></li>
+</ul>
