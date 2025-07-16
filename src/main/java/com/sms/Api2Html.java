@@ -1,9 +1,11 @@
 package com.sms;
 
+import static java.lang.Character.*;
 import static java.lang.String.format;
+import static java.lang.String.join;
 import static java.util.Collections.emptyMap;
 import static java.util.Optional.ofNullable;
-import static java.util.stream.Collectors.joining;
+import static java.util.function.Predicate.not;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.apache.commons.collections4.MapUtils.isNotEmpty;
 import static org.apache.commons.lang3.StringUtils.*;
@@ -42,6 +44,9 @@ public class Api2Html implements Callable<Integer> {
 
 	@Option(names = {"-o", "--output"}, paramLabel = "OUTPUT")
 	private File output;
+
+	@Option(names = {"--no-description"})
+	private boolean noDescription;
 
 	@Parameters(index = "0", arity = "1")
 	private File input;
@@ -143,10 +148,14 @@ public class Api2Html implements Callable<Integer> {
 						.map(StringUtils::trimToNull)
 						.filter(Objects::nonNull)
 						.filter(s -> !"null".equals(s))
-						.collect(joining(", "));
+						.toList();
 
-				scm.setTitle(format("ValuedEnum<%s>", enumType));
-				scm.setExtensions(Map.of("enums", enumValues));
+				if (enumValues.stream().anyMatch(not(this::isJavaIdentifier))) {
+					scm.setTitle(format("ValuedEnum<%s>", enumType));
+				} else {
+					scm.setTitle(enumType);
+				}
+				scm.setExtensions(Map.of("enums", join(", ", enumValues)));
 			} else {
 				scm.setTitle("String");
 			}
@@ -264,6 +273,7 @@ public class Api2Html implements Callable<Integer> {
 		final var context = new Context();
 
 		context.setVariable("schema", schema);
+		context.setVariable("description", !this.noDescription);
 
 		this.engine.process(template, context, writer);
 	}
@@ -274,5 +284,25 @@ public class Api2Html implements Callable<Integer> {
 		}
 
 		return ref.substring(SCM_PREFIX.length());
+	}
+
+	private boolean isJavaIdentifier(String s) {
+		if (isEmpty(s)) {
+			return false;
+		}
+
+		char[] chars = s.toCharArray();
+
+		if (!isJavaIdentifierStart(chars[0]) || chars[0] == '_') {
+			return false;
+		}
+
+		for (int k = 1; k < chars.length; k++) {
+			if (!isJavaIdentifierPart(chars[k])) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 }
