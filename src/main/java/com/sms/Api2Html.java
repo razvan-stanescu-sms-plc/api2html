@@ -88,7 +88,7 @@ public class Api2Html implements Callable<Integer> {
 				scm.set$id(id);
 			}
 
-			setTitle(id, scm);
+			updateTitle(id, scm, false);
 		}
 
 		this.schemas = resolveSchemas(this.schemas, false);
@@ -140,7 +140,7 @@ public class Api2Html implements Callable<Integer> {
 		return 0;
 	}
 
-	private void setTitle(final String id, final Schema scm) {
+	private void updateTitle(final String id, final Schema scm, boolean fields) {
 		if (scm instanceof StringSchema) {
 			if (isNotEmpty(scm.getEnum())) {
 				final var enumType = capitalize(id) + "Enum";
@@ -169,6 +169,12 @@ public class Api2Html implements Callable<Integer> {
 			return;
 		}
 
+		if (fields && scm instanceof ArraySchema) {
+			scm.setTitle(format("List<%s>", scm.getItems().getTitle()));
+
+			return;
+		}
+
 		if (isEmpty(scm.getTitle())) {
 			scm.setTitle(capitalize(id).replace("-", "").replace("_", ""));
 		}
@@ -180,7 +186,7 @@ public class Api2Html implements Callable<Integer> {
 		for (final var ent : source.entrySet()) {
 			final var scm = resolveSchema(ent.getValue());
 
-			cleanup(ent.getKey(), scm);
+			updateTitle(ent.getKey(), scm, fields);
 
 			if (fields) {
 				target.put(uncapitalize(ent.getKey()), scm);
@@ -213,27 +219,17 @@ public class Api2Html implements Callable<Integer> {
 			}
 		}
 
+		if (scm instanceof ArraySchema a) {
+			scm.setItems(resolveSchema(scm.getItems()));
+		}
+		if (scm instanceof ComposedSchema && isNotEmpty(scm.getOneOf())) {
+			scm.setOneOf(resolveSchemas(scm.getOneOf()));
+		}
+		if (scm instanceof ObjectSchema && isNotEmpty(scm.getProperties())) {
+			scm.setProperties(resolveSchemas(scm.getProperties(), true));
+		}
+
 		return scm;
-	}
-
-	private void cleanup(String id, Schema schema) {
-		if (schema instanceof ArraySchema a) {
-			schema.setItems(resolveSchema(schema.getItems()));
-		}
-
-		if (schema instanceof ComposedSchema && isNotEmpty(schema.getOneOf())) {
-			schema.setOneOf(resolveSchemas(schema.getOneOf()));
-
-			return;
-		}
-
-		if (schema instanceof ObjectSchema && isNotEmpty(schema.getProperties())) {
-			schema.setProperties(resolveSchemas(schema.getProperties(), true));
-
-			return;
-		}
-
-		setTitle(id, schema);
 	}
 
 	private void generateFor(@Nonnull Schema schema) {
